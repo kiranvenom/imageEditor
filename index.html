@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Download Edited Image</title>
+	</head>
+	<body>
+		<div class="main">
+			<input type="file" name="image" id="image" accept="image/*" />
+		</div>
+		<div id="imageEditor" style="display: none">
+			<canvas id="canvas" width="400" height="300"></canvas>
+			<input type="text" id="textInput" placeholder="Enter text" />
+			<button id="addTextButton">Add Text</button>
+			<input type="color" id="textColor" value="#000000" />
+			<input type="number" id="fontSize" placeholder="Font Size" />
+			<button id="clearTextButton">Clear Text</button>
+			<button id="downloadButton">Download Image</button>
+		</div>
+
+		<script>
+			var fileInput = document.getElementById('image');
+			var imageEditor = document.getElementById('imageEditor');
+			var canvas = document.getElementById('canvas');
+			var textInput = document.getElementById('textInput');
+			var addTextButton = document.getElementById('addTextButton');
+			var textColorInput = document.getElementById('textColor');
+			var fontSizeInput = document.getElementById('fontSize');
+			var clearTextButton = document.getElementById('clearTextButton');
+			var downloadButton = document.getElementById('downloadButton');
+			var ctx = canvas.getContext('2d');
+			var img = new Image();
+			var isDragging = false;
+			var textElements = [];
+
+			fileInput.addEventListener('change', function (event) {
+				const selectedFile = event.target.files[0];
+
+				if (selectedFile) {
+					img.src = URL.createObjectURL(selectedFile);
+					img.onload = function () {
+						imageEditor.style.display = 'block';
+						canvas.width = img.width;
+						canvas.height = img.height;
+						drawImageAndText();
+					};
+				}
+			});
+
+			function drawImageAndText() {
+				ctx.clearRect(0, 0, canvas.width, canvas.height);
+				ctx.drawImage(img, 0, 0, img.width, img.height);
+
+				for (var i = 0; i < textElements.length; i++) {
+					var textElement = textElements[i];
+					ctx.font = textElement.fontSize + 'px Arial';
+					ctx.fillStyle = textElement.color;
+					ctx.fillText(
+						textElement.text,
+						textElement.x,
+						textElement.y,
+					);
+				}
+			}
+
+			canvas.addEventListener('mousedown', function (e) {
+				var mouseX = e.clientX - canvas.getBoundingClientRect().left;
+				var mouseY = e.clientY - canvas.getBoundingClientRect().top;
+
+				for (var i = textElements.length - 1; i >= 0; i--) {
+					var textElement = textElements[i];
+					var textWidth = ctx.measureText(textElement.text).width;
+					if (
+						mouseX >= textElement.x &&
+						mouseX <= textElement.x + textWidth &&
+						mouseY >= textElement.y - textElement.fontSize &&
+						mouseY <= textElement.y
+					) {
+						isDragging = i;
+						break;
+					}
+				}
+			});
+
+			canvas.addEventListener('mousemove', function (e) {
+				if (isDragging !== false) {
+					var textElement = textElements[isDragging];
+					textElement.x =
+						e.clientX - canvas.getBoundingClientRect().left;
+					textElement.y =
+						e.clientY - canvas.getBoundingClientRect().top;
+					drawImageAndText();
+				}
+			});
+
+			canvas.addEventListener('mouseup', function () {
+				isDragging = false;
+			});
+
+			addTextButton.addEventListener('click', function () {
+				var text = textInput.value;
+				var fontSize = parseInt(fontSizeInput.value) || 30;
+				var color = textColorInput.value;
+
+				if (text) {
+					textElements.push({
+						text: text,
+						x: 10,
+						y: 50,
+						fontSize: fontSize,
+						color: color,
+					});
+					textInput.value = '';
+					fontSizeInput.value = '';
+					drawImageAndText();
+				}
+			});
+
+			clearTextButton.addEventListener('click', function () {
+				textElements = [];
+				drawImageAndText();
+			});
+
+			downloadButton.addEventListener('click', function () {
+				// Create a temporary anchor element to trigger the download
+				var link = document.createElement('a');
+				link.download = 'edited_image.png';
+
+				// Convert the canvas content to a data URL
+				link.href = canvas.toDataURL('image/png');
+
+				// Trigger a click event on the anchor element to start the download
+				link.click();
+			});
+		</script>
+	</body>
+</html>
